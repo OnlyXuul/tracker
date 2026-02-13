@@ -12,6 +12,9 @@ import "shared:afmt"
 /*	Copy-Paste this to top of main in your project
 
 	when ODIN_DEBUG {
+		//	Uncomment this if you do wish to override with
+		//	-define:tracker_panic=false when building
+		//tracker.PANIC = false
 		t := tracker.init_tracker()
 		context.allocator = tracker.tracking_allocator(&t)
 		defer tracker.print_and_destroy_tracker(&t)
@@ -20,8 +23,8 @@ import "shared:afmt"
 */
 
 //	Default is to panic when a bad free is detected.
-//	Override with: -define:panic=false
-PANIC :: #config(panic, true)
+//	Override with: -define:tracker_panic=false
+PANIC := #config(tracker_panic, true)
 
 //	Alias so that only this tracker package needs to be imported and not also core:mem
 tracking_allocator      :: mem.tracking_allocator
@@ -46,12 +49,35 @@ trim_path :: proc(file_path: string) -> (path: string) {
 	return
 }
 
+convert_bytes :: proc(size: $T) -> (f64, string) where T == uint || T == i64 {
+	units := []string{"Bytes", "KBs", "MBs", "GBs", "TBs"}
+	index := 0
+	fsize := f64(size)
+
+	for index = 0; fsize >= 1024 && index < len(units) - 1; index += 1 {
+		fsize /= 1024.000  
+	}
+
+	if units[index] == "Bytes" {
+		return fsize / 1024.000, "KBs"
+	}
+
+	return fsize, units[index]
+}
+
 //	Print allocations not freed and bad frees, then destroy tracker
 print_and_destroy_tracker :: proc(t: ^mem.Tracking_Allocator) {
 
 	header := [2]afmt.Column(afmt.ANSI24) {
 		{16, .LEFT, {fg = afmt.black, bg = [3]u8{074, 165, 240}, at = {.BOLD}}},
-		{64, .LEFT, {fg = afmt.black, bg = [3]u8{077, 196, 255}, at = {.BOLD}}}
+		{64, .LEFT, {fg = afmt.black, bg = [3]u8{077, 196, 255}, at = {.BOLD}}},
+	}
+
+	metrics := [4]afmt.Column(afmt.ANSI24) {
+		{16, .LEFT,  {fg = [3]u8{074, 165, 240}, bg = afmt.black, at = {.BOLD}}},
+		{31, .LEFT,  {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.BOLD}}},
+		{1,  .LEFT,  {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.BOLD}}},
+		{32, .RIGHT, {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.BOLD}}},
 	}
 
 	is_ok_title := [2]afmt.Column(afmt.ANSI24) {
@@ -76,20 +102,36 @@ print_and_destroy_tracker :: proc(t: ^mem.Tracking_Allocator) {
 
 	title:  [2]afmt.Column(afmt.ANSI24)
 	record:	[2]afmt.Column(afmt.ANSI24)
+
+	//	context.temp_allocator data
+	temp_data := transmute(^runtime.Default_Temp_Allocator)(context.temp_allocator.data)
+	defer runtime.default_temp_allocator_destroy(temp_data)
+	used := temp_data.arena.total_used
+	cap  := temp_data.arena.total_capacity
+	temp_lt := afmt.tprintf(" %v Bytes (%.2f %v)", used, convert_bytes(used))
+	temp_rt := afmt.tprintf("%v Bytes (%.2f %v) ", cap, convert_bytes(cap))
+	afmt.printrow(header, " Allocator", " context.temp_allocator")
+	afmt.printrow(metrics, " Used/Capacity", temp_lt, "/", temp_rt)
 	
+	//	context.allocator
 	//	Print Header
-	peak_total := afmt.tprintf(" %d / %d Bytes", t.peak_memory_allocated, t.total_memory_allocated)
-	afmt.printrow(header, " Peak/Allocated", peak_total)
+	afmt.printrow(header, " Allocator", " context.allocator")
+	peak  := t.peak_memory_allocated
+	total := t.total_memory_allocated
+	ctx_lt := afmt.tprintf(" %v Bytes (%.2f %v)", peak, convert_bytes(peak))
+	ctx_rt := afmt.tprintf("%v Bytes (%.2f %v) ", total, convert_bytes(total))
+	afmt.printrow(metrics, " Peak/Allocated", ctx_lt, "/", ctx_rt)
 
 	//	Print Allocations not freed
 	title = len(t.allocation_map) == 0 ? is_ok_title : not_ok_title
 	not_freed := len(t.allocation_map)
 	allocated := t.total_allocation_count
-	afmt.printrow(title, afmt.tprintf(" %d/%d", not_freed, allocated), " Allocations Not Freed")
+	leaked := title == is_ok_title ? " 0 Bytes Leaked" : " Leaked Bytes"
+	afmt.printrow(title, leaked, afmt.tprintf(" %d/%d Allocations Not Freed", not_freed, allocated))
 	if len(t.allocation_map) > 0 {
 		for _, entry in t.allocation_map {
 			loc		:= entry.location
-			label := afmt.tprintf("%9d %s ", entry.size, "Bytes")
+			label := afmt.tprintf(" %d", entry.size)
 			field	:= afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path), loc.line, loc.column)
 			record = record == record_even ? record_odd : record_even
 			length := len(field) + len(loc.procedure) + 1
@@ -100,14 +142,15 @@ print_and_destroy_tracker :: proc(t: ^mem.Tracking_Allocator) {
 
 	//	Print Incorrect frees
 	if !PANIC {
-		title = len(t.allocation_map) == 0 ? is_ok_title : not_ok_title
+		title = len(t.bad_free_array) == 0 ? is_ok_title : not_ok_title
 		bad_frees		:= len(t.bad_free_array)
 		total_frees	:= i64(len(t.bad_free_array)) + t.total_free_count
-		afmt.printrow(title, afmt.tprintf(" %d/%d", bad_frees, total_frees), " Incorrect Frees")
+		memory := title == is_ok_title ? " 0 Bad Frees" : " Memory Address"
+		afmt.printrow(title, memory, afmt.tprintf(" %d/%d Bad Frees", bad_frees, total_frees))
 		if len(t.bad_free_array) > 0 {
 			for entry in t.bad_free_array {
 				loc		:= entry.location
-				label	:= afmt.tprintf("%p", entry.memory)
+				label	:= afmt.tprintf(" %p", entry.memory)
 				field	:= afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path), loc.line, loc.column)
 				record = record == record_even ? record_odd : record_even
 				length := len(field) + len(loc.procedure) + 1
