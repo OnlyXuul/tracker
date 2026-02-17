@@ -11,9 +11,11 @@ import "shared:afmt"
 
 /*	Copy-Paste this to top of main in your project
 
+	//	Override panic on bad frees with -define:tracker_panic=false
+	//	or
+	//	uncomment tracker.PANIC line below
+
 	when ODIN_DEBUG {
-		//	Uncomment this if you do wish to override with
-		//	-define:tracker_panic=false when building
 		//tracker.PANIC = false
 		t := tracker.init_tracker()
 		context.allocator = tracker.tracking_allocator(&t)
