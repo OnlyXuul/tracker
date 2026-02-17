@@ -10,8 +10,9 @@ import "shared:tracker"<br>
 
 Copy to the top of main:<br>
 when ODIN_DEBUG {<br>
-//	Uncomment this if you do wish to override with<br>
-//	-define:tracker_panic=false when building<br>
+//	Uncomment tracker.PANIC line if you do not wish to override with<br>
+//	-define:tracker_panic=false<br>
+//	when building<br>
 //tracker.PANIC = false<br>
 t := tracker.init_tracker()<br>
 context.allocator = tracker.tracking_allocator(&t)<br>
