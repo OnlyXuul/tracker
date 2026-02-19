@@ -106,7 +106,7 @@ print_and_destroy_tracker :: proc(t: ^mem.Tracking_Allocator) {
 	record:	[2]afmt.Column(afmt.ANSI24)
 
 	//	context.temp_allocator data
-	temp_data := transmute(^runtime.Default_Temp_Allocator)(context.temp_allocator.data)
+	temp_data := (^runtime.Default_Temp_Allocator)(context.temp_allocator.data)
 	defer runtime.default_temp_allocator_destroy(temp_data)
 	used := temp_data.arena.total_used
 	cap  := temp_data.arena.total_capacity
