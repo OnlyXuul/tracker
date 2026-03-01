@@ -12,7 +12,7 @@ import "shared:afmt"
 /*	Copy-Paste this to top of main in your project
 
 	when ODIN_DEBUG {
-		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true<br>
+		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
 		t := tracker.init_tracker()
 		context.allocator = tracker.tracking_allocator(&t)
 		defer tracker.print_and_destroy_tracker(&t)
