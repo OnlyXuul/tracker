@@ -10,10 +10,10 @@ import "shared:tracker"<br>
 
 Copy to the top of main:<br>
 when ODIN_DEBUG {<br>
-//	Uncomment tracker.PANIC line if you do not wish to override with<br>
-//	-define:tracker_panic=false<br>
+//	Uncomment tracker.NOPANIC line if you do not wish to override with<br>
+//	-define:nopanic=true<br>
 //	when building<br>
-//tracker.PANIC = false<br>
+//tracker.NOPANIC = false<br>
 t := tracker.init_tracker()<br>
 context.allocator = tracker.tracking_allocator(&t)<br>
 defer tracker.print_and_destroy_tracker(&t)<br>
@@ -23,7 +23,10 @@ Build with:<br>
 odin build . -debug
 
 By default, the tracker will panic on bad frees. To override this use:<br>
-odin build . -debug -define:panic=false<br>
+odin build . -debug -define:nopanic=true<br>
+
+By default, the tracker will use ansi color and attribute formatting. To override this use:<br>
+odin build . -debug -define:noansi=true<br>
 
 Output For No Problems
 ![Alt text](/screenshots/good.jpg?raw=true)
