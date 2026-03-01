@@ -12,7 +12,6 @@ Copy to the top of main:<br>
 when ODIN_DEBUG {<br>
 //	Uncomment tracker.NOPANIC line if you do not wish to override with<br>
 //	-define:nopanic=true<br>
-//	when building<br>
 //tracker.NOPANIC = false<br>
 t := tracker.init_tracker()<br>
 context.allocator = tracker.tracking_allocator(&t)<br>
