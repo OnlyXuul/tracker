@@ -11,12 +11,12 @@ import "shared:afmt"
 
 /*	Copy-Paste this to top of main in your project
 
-	//	Override panic on bad frees with -define:tracker_panic=false
+	//	Override panic on bad frees with -define:nopanic=true
 	//	or
-	//	uncomment tracker.PANIC line below
+	//	uncomment tracker.NOPANIC line below
 
 	when ODIN_DEBUG {
-		//tracker.PANIC = false
+		//tracker.NOPANIC = true
 		t := tracker.init_tracker()
 		context.allocator = tracker.tracking_allocator(&t)
 		defer tracker.print_and_destroy_tracker(&t)
@@ -25,15 +25,19 @@ import "shared:afmt"
 */
 
 //	Default is to panic when a bad free is detected.
-//	Override with: -define:tracker_panic=false
-PANIC := #config(tracker_panic, true)
+//	Override with: -define:nopanic=true
+NOPANIC := #config(nopanic, false)
+
+//	Default is to use ansi colors and formatting
+//	Override with: -define:noansi=true
+NOANSI := #config(noansi, false)
 
 //	Alias so that only this tracker package needs to be imported and not also core:mem
 tracking_allocator      :: mem.tracking_allocator
 
 init_tracker :: proc() -> (t: mem.Tracking_Allocator) {
 	mem.tracking_allocator_init(&t, context.allocator)
-	if !PANIC {
+	if NOPANIC {
 		t.bad_free_callback = mem.tracking_allocator_bad_free_callback_add_to_array
 	}
 	return
@@ -71,35 +75,35 @@ convert_bytes :: proc(size: $T) -> (f64, string) where T == uint || T == i64 {
 print_and_destroy_tracker :: proc(t: ^mem.Tracking_Allocator) {
 
 	header := [2]afmt.Column(afmt.ANSI24) {
-		{16, .LEFT, {fg = afmt.black, bg = [3]u8{074, 165, 240}, at = {.BOLD}}},
-		{64, .LEFT, {fg = afmt.black, bg = [3]u8{077, 196, 255}, at = {.BOLD}}},
+		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{074, 165, 240}, at = {.BOLD}}},
+		{64, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{077, 196, 255}, at = {.BOLD}}},
 	}
 
 	metrics := [4]afmt.Column(afmt.ANSI24) {
-		{16, .LEFT,  {fg = [3]u8{074, 165, 240}, bg = afmt.black, at = {.BOLD}}},
-		{31, .LEFT,  {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.BOLD}}},
-		{1,  .LEFT,  {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.BOLD}}},
-		{32, .RIGHT, {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.BOLD}}},
+		{16, .LEFT,  NOANSI ? {} : {fg = [3]u8{074, 165, 240}, bg = afmt.black, at = {.BOLD}}},
+		{31, .LEFT,  NOANSI ? {} : {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.BOLD}}},
+		{1,  .LEFT,  NOANSI ? {} : {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.BOLD}}},
+		{32, .RIGHT, NOANSI ? {} : {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.BOLD}}},
 	}
 
 	is_ok_title := [2]afmt.Column(afmt.ANSI24) {
-		{16, .LEFT, {fg = afmt.black, bg = [3]u8{140, 194, 101}, at = {.BOLD}}},
-		{64, .LEFT, {fg = afmt.black, bg = [3]u8{165, 224, 117}, at = {.BOLD}}},
+		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{140, 194, 101}, at = {.BOLD}}},
+		{64, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{165, 224, 117}, at = {.BOLD}}},
 	}
 
 	not_ok_title := [2]afmt.Column(afmt.ANSI24) {
-		{16, .LEFT, {fg = afmt.black, bg = [3]u8{224, 085, 097}, at = {.BOLD}}},
-		{64, .LEFT, {fg = afmt.black, bg = [3]u8{255, 097, 110}, at = {.BOLD}}},
+		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{224, 085, 097}, at = {.BOLD}}},
+		{64, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{255, 097, 110}, at = {.BOLD}}},
 	}
 
 	record_even := [2]afmt.Column(afmt.ANSI24) {
-		{16, .LEFT, {fg = afmt.black, bg = [3]u8{224, 216, 138}, at = {.BOLD}}},
-		{64, .LEFT, {fg = [3]u8{238, 233, 172}, bg = afmt.black}},
+		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{224, 216, 138}, at = {.BOLD}}},
+		{64, .LEFT, NOANSI ? {} : {fg = [3]u8{238, 233, 172}, bg = afmt.black}},
 	}
 
 	record_odd := [2]afmt.Column(afmt.ANSI24) {
-		{16, .LEFT, {fg = afmt.black, bg = [3]u8{238, 233, 172}, at = {.BOLD}}},
-		{64, .LEFT, {fg = [3]u8{238, 233, 172}, bg = afmt.black + 25}},
+		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{238, 233, 172}, at = {.BOLD}}},
+		{64, .LEFT, NOANSI ? {} : {fg = [3]u8{238, 233, 172}, bg = afmt.black + 25}},
 	}
 
 	title:  [2]afmt.Column(afmt.ANSI24)
@@ -143,7 +147,7 @@ print_and_destroy_tracker :: proc(t: ^mem.Tracking_Allocator) {
 	}
 
 	//	Print Incorrect frees
-	if !PANIC {
+	if NOPANIC {
 		title = len(t.bad_free_array) == 0 ? is_ok_title : not_ok_title
 		bad_frees		:= len(t.bad_free_array)
 		total_frees	:= i64(len(t.bad_free_array)) + t.total_free_count
