@@ -5,7 +5,7 @@ Full credit to Odin (gingerbill) and Karl Zylinski for the original version of t
 
 **This package depends on [afmt](https://github.com/OnlyXuul/afmt) package.**<br>
 ## Steps
-1. Create folder "tracker" in the "odin/shared" folder and copy tracker.odin to the "tracker" folder. Or using the terminal, navigate to odin/shared folder and clone with
+1. Using the terminal, navigate to odin/shared folder and clone with
    ```
    cd /odin/shared
    git clone https://github.com/OnlyXuul/tracker.git
