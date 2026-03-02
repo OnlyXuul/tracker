@@ -1,4 +1,4 @@
-# Tracker<br>
+# <span style="background-color: #4DC4FF; color: #000000;">Tracker</span><br>
 Odin tracker for detecting leaks and bad frees of memory allocated using the context.allocator. Output is colorized and table formatted.<br>
 <br>
 Full credit to Odin (gingerbill) and Karl Zylinski for the original version of the non-formatted version.<br>
