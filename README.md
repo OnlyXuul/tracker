@@ -26,7 +26,7 @@ By default, the tracker will use ansi color and attribute formatting. To overrid
 odin build . -debug -define:noansi=true<br>
 
 Output For No Problems
-![Alt text](/screenshots/good.jpg?raw=true)
+![Alt text](/screenshots/tracker_no_problems.png?raw=true)
 
 Output Detailing Problems Found
-![Alt text](/screenshots/bad.jpg?raw=true)
+![Alt text](/screenshots/tracker_problems.png?raw=true)
