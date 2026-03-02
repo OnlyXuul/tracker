@@ -25,8 +25,10 @@ odin build . -debug -define:nopanic=true<br>
 By default, the tracker will use ansi color and attribute formatting. To override this use:<br>
 odin build . -debug -define:noansi=true<br>
 
-Output For No Problems
+No Problems<br>
+Output from odin build . -debug -define:nopanic=true<br>
 ![Alt text](/screenshots/tracker_no_problems.png?raw=true)
 
-Output Detailing Problems Found
+Problems Found<br>
+Output from odin build . -debug -define:nopanic=true<br>
 ![Alt text](/screenshots/tracker_problems.png?raw=true)
