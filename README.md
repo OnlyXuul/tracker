@@ -7,7 +7,7 @@ Full credit to Odin (gingerbill) and Karl Zylinski for the original version of t
 ## Steps
 1. Using the terminal, navigate to odin/shared folder and clone with
    ```bash
-   cd /odin/shared
+   cd $(odin root)shared
    git clone https://github.com/OnlyXuul/tracker.git
    git clone https://github.com/OnlyXuul/afmt.git
    ```
