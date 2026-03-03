@@ -40,6 +40,11 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
    ```
    odin build . -debug -define:noansi=true
    ```
+## Run example.odin
+   ```bash
+   cd $(odin root)shared/tracker/example
+   odin run . -debug -define:nopanic=true
+   ```
 ## Examples
 ### No Problems<br>
 ```
