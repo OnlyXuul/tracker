@@ -4,6 +4,9 @@ Odin tracker for detecting leaks and bad frees of memory allocated using the con
 Full credit to Odin (gingerbill) and Karl Zylinski for the original version of the non-formatted version.<br>
 
 **This package depends on [afmt](https://github.com/OnlyXuul/afmt) package.**<br>
+
+Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.gingerbill.org/series/memory-allocation-strategies/) for tips on memory management.
+
 ## Steps
 1. Using the terminal, navigate to odin/shared folder and clone with
    ```bash
