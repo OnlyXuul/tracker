@@ -45,7 +45,7 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
    cd $(odin root)shared/tracker/example
    odin run . -debug -define:nopanic=true
    ```
-## Examples
+## Example Output
 ### No Problems<br>
 ```
 odin build . -debug -define:nopanic=true
