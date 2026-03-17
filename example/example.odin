@@ -7,10 +7,10 @@ import "shared:afmt"
 
 main :: proc () {
 	when ODIN_DEBUG {
-		tracker.NOPANIC = true
-		t := tracker.init_tracker()
-		context.allocator = tracker.tracking_allocator(&t)
-		defer tracker.print_and_destroy_tracker(&t)
+		tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
+		this_tracker := tracker.init_tracker()
+		context.allocator = tracker.tracking_allocator(&this_tracker)
+		defer tracker.print_and_destroy_tracker(&this_tracker)
 	}
 
 	test01 := make([dynamic]int, 8)
