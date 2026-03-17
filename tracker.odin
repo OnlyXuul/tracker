@@ -4,6 +4,7 @@ import "core:mem"
 import "base:runtime"
 import "core:strings"
 
+//	afmt is required to be in odin/shared which is availible on my git page
 import "shared:afmt"
 
 //	At the top of your project import this package
@@ -12,10 +13,10 @@ import "shared:afmt"
 /*	Copy-Paste this to top of main in your project
 
 	when ODIN_DEBUG {
-		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
-		t := tracker.init_tracker()
-		context.allocator = tracker.tracking_allocator(&t)
-		defer tracker.print_and_destroy_tracker(&t)
+		tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
+		this_tracker := tracker.init_tracker()
+		context.allocator = tracker.tracking_allocator(&this_tracker)
+		defer tracker.print_and_destroy_tracker(&this_tracker)
 	}
 
 */
@@ -115,8 +116,7 @@ print_and_destroy_tracker :: proc(t: ^mem.Tracking_Allocator) {
 	afmt.printrow(header, " Allocator", " context.temp_allocator")
 	afmt.printrow(metrics, " Used/Capacity", temp_lt, "/", temp_rt)
 	
-	//	context.allocator
-	//	Print Header
+	//	context.allocator data
 	afmt.printrow(header, " Allocator", " context.allocator")
 	peak  := t.peak_memory_allocated
 	total := t.total_memory_allocated
