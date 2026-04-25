@@ -1,7 +1,6 @@
 package example
 
 import "shared:tracker"
-import "shared:afmt"
 
 //	odin run . -debug
 
