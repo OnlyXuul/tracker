@@ -13,7 +13,7 @@ import "shared:afmt"
 /*	Copy-Paste this to top of main in your project
 
 	when ODIN_DEBUG {
-		tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
+		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
 		this_tracker := tracker.init_tracker()
 		context.allocator = tracker.tracking_allocator(&this_tracker)
 		defer tracker.print_and_destroy_tracker(&this_tracker)
@@ -72,34 +72,34 @@ convert_bytes :: proc(size: $T) -> (f64, string) where T == uint || T == i64 {
 print_and_destroy_tracker :: proc(t: ^mem.Tracking_Allocator) {
 
 	header := [2]afmt.Column(afmt.ANSI24) {
-		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{074, 165, 240}, at = {.BOLD}}},
-		{64, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{077, 196, 255}, at = {.BOLD}}},
+		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{074, 165, 240}, at = {.bold}}},
+		{64, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{077, 196, 255}, at = {.bold}}},
 	}
 
 	metrics := [4]afmt.Column(afmt.ANSI24) {
-		{16, .LEFT,  NOANSI ? {} : {fg = [3]u8{074, 165, 240}, bg = afmt.black, at = {.BOLD}}},
-		{31, .LEFT,  NOANSI ? {} : {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.BOLD}}},
-		{1,  .LEFT,  NOANSI ? {} : {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.BOLD}}},
-		{32, .RIGHT, NOANSI ? {} : {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.BOLD}}},
+		{16, .LEFT,  NOANSI ? {} : {fg = [3]u8{074, 165, 240}, bg = afmt.black, at = {.bold}}},
+		{31, .LEFT,  NOANSI ? {} : {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.bold}}},
+		{1,  .LEFT,  NOANSI ? {} : {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.bold}}},
+		{32, .RIGHT, NOANSI ? {} : {fg = [3]u8{077, 196, 255}, bg = afmt.black, at = {.bold}}},
 	}
 
 	is_ok_title := [2]afmt.Column(afmt.ANSI24) {
-		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{140, 194, 101}, at = {.BOLD}}},
-		{64, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{165, 224, 117}, at = {.BOLD}}},
+		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{140, 194, 101}, at = {.bold}}},
+		{64, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{165, 224, 117}, at = {.bold}}},
 	}
 
 	not_ok_title := [2]afmt.Column(afmt.ANSI24) {
-		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{224, 085, 097}, at = {.BOLD}}},
-		{64, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{255, 097, 110}, at = {.BOLD}}},
+		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{224, 085, 097}, at = {.bold}}},
+		{64, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{255, 097, 110}, at = {.bold}}},
 	}
 
 	record_even := [2]afmt.Column(afmt.ANSI24) {
-		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{224, 216, 138}, at = {.BOLD}}},
+		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{224, 216, 138}, at = {.bold}}},
 		{64, .LEFT, NOANSI ? {} : {fg = [3]u8{238, 233, 172}, bg = afmt.black}},
 	}
 
 	record_odd := [2]afmt.Column(afmt.ANSI24) {
-		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{238, 233, 172}, at = {.BOLD}}},
+		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{238, 233, 172}, at = {.bold}}},
 		{64, .LEFT, NOANSI ? {} : {fg = [3]u8{238, 233, 172}, bg = afmt.black + 25}},
 	}
 
