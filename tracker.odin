@@ -10,15 +10,39 @@ import "shared:afmt"
 //	At the top of your project import this package
 //	import "shared:tracker"
 
-/*	Copy-Paste this to top of main in your project
+//	Non-Global Tracker
 
+/*	Copy-Paste this to top of main in your project
 	when ODIN_DEBUG {
 		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
-		this_tracker := tracker.init_tracker()
-		context.allocator = tracker.tracking_allocator(&this_tracker)
-		defer tracker.print_and_destroy_tracker(&this_tracker)
+		t := tracker.init()
+		context.allocator = t.allocator
+		defer tracker.print_and_destroy(&t)
 	}
+*/
 
+//	Global Tracker - 3 parts
+
+/*	Part 1 - Copy-Paste this in init procedure like in wasm
+	when ODIN_DEBUG {
+		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
+		tracker.init_global()
+		context.allocator = tracker.global.allocator
+		defer tracker.print_and_destroy(&tracker.global)
+	}
+*/
+
+/*	Part 2 - Copy and paste this to the beginning of every procedure you wish tracker to collect data for
+	when ODIN_DEBUG {
+		context.allocator = tracker.global.allocator
+	}
+*/
+
+/*	Part 3 - Copy and past this in the final procedure like shutdown in wasm
+	when ODIN_DEBUG {
+		context.allocator = tracker.global.allocator
+		defer tracker.print_and_destroy(&tracker.global)
+	}
 */
 
 //	Default is to panic when a bad free is detected.
@@ -29,15 +53,43 @@ NOPANIC := #config(nopanic, false)
 //	Override with: -define:noansi=true
 NOANSI := #config(noansi, false)
 
-//	Alias so that only this tracker package needs to be imported and not also core:mem
-tracking_allocator :: mem.tracking_allocator
+Tracker :: struct {
+	data:      ^mem.Tracking_Allocator,
+	allocator: mem.Allocator,
+}
 
-init_tracker :: proc() -> (t: mem.Tracking_Allocator) {
-	mem.tracking_allocator_init(&t, context.allocator)
-	if NOPANIC {
-		t.bad_free_callback = mem.tracking_allocator_bad_free_callback_add_to_array
-	}
+//	Useful if wishing to use tracker independent of main, like with wasm programs
+global: Tracker
+
+panic_allocator    :: mem.tracking_allocator_bad_free_callback_panic
+no_panic_allocator :: mem.tracking_allocator_bad_free_callback_add_to_array
+
+init :: proc() -> (t: Tracker) {
+	t.data = new(mem.Tracking_Allocator, context.allocator)
+	mem.tracking_allocator_init(t.data, context.allocator)
+	t.data.bad_free_callback = NOPANIC ? no_panic_allocator : panic_allocator
+	t.allocator = mem.tracking_allocator(t.data)
 	return
+}
+
+init_global :: proc() -> (Tracker) {
+	global.data = new(mem.Tracking_Allocator, context.allocator)
+	mem.tracking_allocator_init(global.data, context.allocator)
+	global.data.bad_free_callback = NOPANIC ? no_panic_allocator : panic_allocator
+	global.allocator = mem.tracking_allocator(global.data)
+	return global
+}
+
+destroy :: proc(t: ^Tracker) {
+	mem.tracking_allocator_destroy(t.data)
+	//restore context.allocator so we can free allocated pointer
+	context.allocator = runtime.default_allocator()
+	free(t.data)
+}
+
+print_and_destroy :: proc(t: ^Tracker) {
+	print(t^)
+	destroy(t)
 }
 
 //	Trim long paths to something more readable if possible without allocating any dynamic memory
@@ -69,7 +121,7 @@ convert_bytes :: proc(size: $T) -> (f64, string) where T == uint || T == i64 {
 }
 
 //	Print allocations not freed and bad frees, then destroy tracker
-print_and_destroy_tracker :: proc(t: ^mem.Tracking_Allocator) {
+print :: proc(t: Tracker) {
 
 	header := [2]afmt.Column(afmt.ANSI24) {
 		{16, .LEFT, NOANSI ? {} : {fg = afmt.black, bg = [3]u8{074, 165, 240}, at = {.bold}}},
@@ -116,20 +168,20 @@ print_and_destroy_tracker :: proc(t: ^mem.Tracking_Allocator) {
 	
 	//	context.allocator metrics
 	afmt.printrow(header, " Allocator", " context.allocator")
-	peak   := t.peak_memory_allocated
-	total  := t.total_memory_allocated
+	peak   := t.data.peak_memory_allocated
+	total  := t.data.total_memory_allocated
 	ctx_lt := afmt.tprintf(" %v Bytes (%.2f %v)", peak, convert_bytes(peak))
 	ctx_rt := afmt.tprintf("%v Bytes (%.2f %v) ", total, convert_bytes(total))
 	afmt.printrow(metrics, " Peak/Allocated", ctx_lt, "/", ctx_rt)
 
 	//	Print Allocations not freed
-	title      = len(t.allocation_map) == 0 ? is_ok_title : not_ok_title
+	title      = len(t.data.allocation_map) == 0 ? is_ok_title : not_ok_title
 	leaked    := title == is_ok_title ? " 0 Bytes Leaked" : " Leaked Bytes"
-	not_freed := len(t.allocation_map)
-	allocated := t.total_allocation_count
+	not_freed := len(t.data.allocation_map)
+	allocated := t.data.total_allocation_count
 	afmt.printrow(title, leaked, afmt.tprintf(" %d/%d Allocations Not Freed", not_freed, allocated))
-	if len(t.allocation_map) > 0 {
-		for _, entry in t.allocation_map {
+	if len(t.data.allocation_map) > 0 {
+		for _, entry in t.data.allocation_map {
 			loc    := entry.location
 			label  := afmt.tprintf(" %d", entry.size)
 			field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path), loc.line, loc.column)
@@ -142,13 +194,13 @@ print_and_destroy_tracker :: proc(t: ^mem.Tracking_Allocator) {
 
 	//	Print Incorrect frees
 	if NOPANIC {
-		title        = len(t.bad_free_array) == 0 ? is_ok_title : not_ok_title
+		title        = len(t.data.bad_free_array) == 0 ? is_ok_title : not_ok_title
 		memory      := title == is_ok_title ? " 0 Bad Frees" : " Memory Address"
-		bad_frees   := len(t.bad_free_array)
-		total_frees := i64(len(t.bad_free_array)) + t.total_free_count
+		bad_frees   := len(t.data.bad_free_array)
+		total_frees := i64(len(t.data.bad_free_array)) + t.data.total_free_count
 		afmt.printrow(title, memory, afmt.tprintf(" %d/%d Bad Frees", bad_frees, total_frees))
-		if len(t.bad_free_array) > 0 {
-			for entry in t.bad_free_array {
+		if len(t.data.bad_free_array) > 0 {
+			for entry in t.data.bad_free_array {
 				loc    := entry.location
 				label  := afmt.tprintf(" %p", entry.memory)
 				field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path), loc.line, loc.column)
@@ -159,7 +211,4 @@ print_and_destroy_tracker :: proc(t: ^mem.Tracking_Allocator) {
 			}
 		}
 	}
-
-	//	Done and destroy tracker
-	mem.tracking_allocator_destroy(t)
 }
