@@ -2,14 +2,14 @@ package example
 
 import "shared:tracker"
 
-//	odin run . -debug
+//	odin run . -debug -define:nopanic=true
 
 main :: proc () {
 	when ODIN_DEBUG {
-		tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
-		this_tracker := tracker.init_tracker()
-		context.allocator = tracker.tracking_allocator(&this_tracker)
-		defer tracker.print_and_destroy_tracker(&this_tracker)
+		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
+		t := tracker.init()
+		context.allocator = t.allocator
+		defer tracker.print_and_destroy(&t)
 	}
 
 	test01 := make([dynamic]int, 1)
