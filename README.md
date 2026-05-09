@@ -20,7 +20,7 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
    ```
 3. Copy into your project:<br>
    ```odin
-   // Non-Global Tracker - Most used - Benefits from main as the originating scope for everything else after
+   // Non-Global Tracker - Most used - Benefits from main() as the originating scope for everything else after
    // Copy-Paste this to top of main in your project
 	when ODIN_DEBUG {
 		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
@@ -32,7 +32,7 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
    // or ...
 
    // Global Tracker - 3 parts - Useful when procedures do not originate from the same scope (i.e. no main procedure)
-   // Part 1 - Copy-Paste this to beginning of init procedure like in wasm
+   // Part 1 - Copy-Paste this to beginning of init() procedure like in wasm
    when ODIN_DEBUG {
 		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
 		tracker.init_global()
@@ -42,7 +42,7 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
    when ODIN_DEBUG {
 		context.allocator = tracker.global.allocator
 	}
-   // Part 3 - Copy and past this to beginning of final procedure like shutdown in wasm
+   // Part 3 - Copy and past this to beginning of final procedure like shutdown() in wasm
    when ODIN_DEBUG {
 		context.allocator = tracker.global.allocator
 		defer tracker.print_and_destroy(&tracker.global)
