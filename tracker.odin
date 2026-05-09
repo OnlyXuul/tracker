@@ -28,7 +28,6 @@ import "shared:afmt"
 		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
 		tracker.init_global()
 		context.allocator = tracker.global.allocator
-		defer tracker.print_and_destroy(&tracker.global)
 	}
 */
 
@@ -53,6 +52,7 @@ NOPANIC := #config(nopanic, false)
 //	Override with: -define:noansi=true
 NOANSI := #config(noansi, false)
 
+//	Tracker data and allocators
 Tracker :: struct {
 	data:      ^mem.Tracking_Allocator,
 	allocator: mem.Allocator,
@@ -61,9 +61,11 @@ Tracker :: struct {
 //	Useful if wishing to use tracker independent of main, like with wasm programs
 global: Tracker
 
+//	Some aliases to shorten syntax
 panic_allocator    :: mem.tracking_allocator_bad_free_callback_panic
 no_panic_allocator :: mem.tracking_allocator_bad_free_callback_add_to_array
 
+//	Initialize non-global tracker. Most used. Benefits from main() being the originating scope for everything after.
 init :: proc() -> (t: Tracker) {
 	t.data = new(mem.Tracking_Allocator, context.allocator)
 	mem.tracking_allocator_init(t.data, context.allocator)
@@ -72,6 +74,7 @@ init :: proc() -> (t: Tracker) {
 	return
 }
 
+//	Initialize global tracker. Useful for programs that do not have main where everything orginates from the same scope
 init_global :: proc() -> (Tracker) {
 	global.data = new(mem.Tracking_Allocator, context.allocator)
 	mem.tracking_allocator_init(global.data, context.allocator)
@@ -80,6 +83,7 @@ init_global :: proc() -> (Tracker) {
 	return global
 }
 
+//	Destroy and free tracker
 destroy :: proc(t: ^Tracker) {
 	mem.tracking_allocator_destroy(t.data)
 	//restore context.allocator so we can free allocated pointer
@@ -87,6 +91,7 @@ destroy :: proc(t: ^Tracker) {
 	free(t.data)
 }
 
+//	Print, then destroy and free tracker
 print_and_destroy :: proc(t: ^Tracker) {
 	print(t^)
 	destroy(t)
@@ -104,6 +109,7 @@ trim_path :: proc(file_path: string) -> (path: string) {
 	return
 }
 
+//	Convert size values to human-readable units
 convert_bytes :: proc(size: $T) -> (f64, string) where T == uint || T == i64 {
 	units := []string{"Bytes", "KBs", "MBs", "GBs", "TBs"}
 	index := 0
@@ -120,7 +126,7 @@ convert_bytes :: proc(size: $T) -> (f64, string) where T == uint || T == i64 {
 	return fsize, units[index]
 }
 
-//	Print allocations not freed and bad frees, then destroy tracker
+//	Print allocations not freed and bad frees
 print :: proc(t: Tracker) {
 
 	header := [2]afmt.Column(afmt.ANSI24) {
