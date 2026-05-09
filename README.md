@@ -20,7 +20,7 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
    ```
 3. Copy into your project:<br>
    ```odin
-   // Non-Global Tracker - Most used - Benifits from main as the originating scope for everything else after
+   // Non-Global Tracker - Most used - Benefits from main as the originating scope for everything else after
    // Copy-Paste this to top of main in your project
 	when ODIN_DEBUG {
 		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
