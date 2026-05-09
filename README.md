@@ -18,16 +18,37 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
    ```odin
    import "shared:tracker"
    ```
-3. Copy to the top of main procedure in your project:<br>
+3. Copy into your project:<br>
    ```odin
-   when ODIN_DEBUG {
-   	//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
-   	t := tracker.init_tracker()
-   	context.allocator = tracker.tracking_allocator(&t)
-   	defer tracker.print_and_destroy_tracker(&t)
+   // Non-Global Tracker - Most used - Benifits from main as the originating scope for everything else after
+   // Copy-Paste this to top of main in your project
+	when ODIN_DEBUG {
+		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
+		t := tracker.init()
+		context.allocator = t.allocator
+		defer tracker.print_and_destroy(&t)
    }
-   ```
 
+   // or ...
+
+   // Global Tracker - 3 parts - Useful when procedures do not originate from the same scope (i.e. no main procedure)
+   // Part 1 - Copy-Paste this in init procedure like in wasm
+   when ODIN_DEBUG {
+		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
+		tracker.init_global()
+		context.allocator = tracker.global.allocator
+		defer tracker.print_and_destroy(&tracker.global)
+	}
+   // Part 2 - Copy and paste this to the beginning of every procedure you wish tracker to collect data for
+   when ODIN_DEBUG {
+		context.allocator = tracker.global.allocator
+	}
+   // Part 3 - Copy and past this in the final procedure like shutdown in wasm
+   when ODIN_DEBUG {
+		context.allocator = tracker.global.allocator
+		defer tracker.print_and_destroy(&tracker.global)
+	}
+   ```
 4. Build with:<br>
    ```
    odin build . -debug
