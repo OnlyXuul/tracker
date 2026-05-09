@@ -48,7 +48,7 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
 		defer tracker.print_and_destroy(&tracker.global)
 	}
    ```
-4. Build with:<br>
+4. Build your project with:<br>
    ```
    odin build . -debug
    ```
