@@ -37,7 +37,6 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
 		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
 		tracker.init_global()
 		context.allocator = tracker.global.allocator
-		defer tracker.print_and_destroy(&tracker.global)
 	}
    // Part 2 - Copy and paste this to the beginning of every procedure you wish tracker to collect data for
    when ODIN_DEBUG {
