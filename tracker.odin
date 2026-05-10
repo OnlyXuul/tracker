@@ -1,6 +1,7 @@
 package tracker
 
 import "core:mem"
+import "core:os"
 import "base:runtime"
 import "core:strings"
 
@@ -56,6 +57,7 @@ NOANSI := #config(noansi, false)
 Tracker :: struct {
 	data:      ^mem.Tracking_Allocator,
 	allocator: mem.Allocator,
+	init_loc:  string,
 }
 
 //	Useful if wishing to use tracker independent of main, like with wasm programs
@@ -66,20 +68,32 @@ panic_allocator    :: mem.tracking_allocator_bad_free_callback_panic
 no_panic_allocator :: mem.tracking_allocator_bad_free_callback_add_to_array
 
 //	Initialize non-global tracker. Most used. Benefits from main() being the originating scope for everything after.
-init :: proc() -> (t: Tracker) {
+init :: proc(loc := #caller_location) -> (t: Tracker) {
 	t.data = new(mem.Tracking_Allocator, context.allocator)
 	mem.tracking_allocator_init(t.data, context.allocator)
 	t.data.bad_free_callback = NOPANIC ? no_panic_allocator : panic_allocator
 	t.allocator = mem.tracking_allocator(t.data)
+	dir, _ := os.split_path(loc.file_path)
+	if index := strings.last_index(dir, "/"); index >= 0 && index + 1 < len(dir) {
+		t.init_loc = dir[index+1:]
+	} else if index := strings.last_index(dir, "\\"); index >= 0 && index + 1 < len(dir) {
+		t.init_loc = dir[index+1:]
+	}
 	return
 }
 
 //	Initialize global tracker. Useful for programs that do not have main where everything orginates from the same scope
-init_global :: proc() -> (Tracker) {
+init_global :: proc(loc := #caller_location) -> (Tracker) {
 	global.data = new(mem.Tracking_Allocator, context.allocator)
 	mem.tracking_allocator_init(global.data, context.allocator)
 	global.data.bad_free_callback = NOPANIC ? no_panic_allocator : panic_allocator
 	global.allocator = mem.tracking_allocator(global.data)
+	dir, _ := os.split_path(loc.file_path)
+	if index := strings.last_index(dir, "/"); index >= 0 && index + 1 < len(dir) {
+		global.init_loc = dir[index+1:]
+	} else if index := strings.last_index(dir, "\\"); index >= 0 && index + 1 < len(dir) {
+		global.init_loc = dir[index+1:]
+	}
 	return global
 }
 
@@ -98,8 +112,11 @@ print_and_destroy :: proc(t: ^Tracker) {
 }
 
 //	Trim long paths to something more readable if possible without allocating any dynamic memory
-trim_path :: proc(file_path: string) -> (path: string) {
+@(private)
+trim_path :: proc(file_path: string, init_loc: string) -> (path: string) {
 	if index := strings.last_index(file_path, ODIN_BUILD_PROJECT_NAME); index >= 0 {
+		path = file_path[index:]
+	} else if index := strings.last_index(file_path, init_loc); index >= 0 {
 		path = file_path[index:]
 	} else if strings.contains(file_path, ODIN_ROOT) {
 		path = file_path[len(ODIN_ROOT):]
@@ -110,6 +127,7 @@ trim_path :: proc(file_path: string) -> (path: string) {
 }
 
 //	Convert size values to human-readable units
+@(private)
 convert_bytes :: proc(size: $T) -> (f64, string) where T == uint || T == i64 {
 	units := []string{"Bytes", "KBs", "MBs", "GBs", "TBs"}
 	index := 0
@@ -190,7 +208,7 @@ print :: proc(t: Tracker) {
 		for _, entry in t.data.allocation_map {
 			loc    := entry.location
 			label  := afmt.tprintf(" %d", entry.size)
-			field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path), loc.line, loc.column)
+			field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path, t.init_loc), loc.line, loc.column)
 			record  = record == record_even ? record_odd : record_even
 			length := len(field) + len(loc.procedure) + 1
 			if length < 256 && length > 64 { record[1].width = u8(length) }
@@ -209,7 +227,7 @@ print :: proc(t: Tracker) {
 			for entry in t.data.bad_free_array {
 				loc    := entry.location
 				label  := afmt.tprintf(" %p", entry.memory)
-				field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path), loc.line, loc.column)
+				field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path, t.init_loc), loc.line, loc.column)
 				record  = record == record_even ? record_odd : record_even
 				length := len(field) + len(loc.procedure) + 1
 				if length < 256 && length > 64 { record[1].width = u8(length) }
