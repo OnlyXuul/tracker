@@ -55,9 +55,9 @@ NOANSI := #config(noansi, false)
 
 //	Tracker data and allocators
 Tracker :: struct {
-	data:      ^mem.Tracking_Allocator,
-	allocator: mem.Allocator,
-	init_loc:  string,
+	data:        ^mem.Tracking_Allocator,
+	allocator:   mem.Allocator,
+	root_folder: string,
 }
 
 //	Useful if wishing to use tracker independent of main, like with wasm programs
@@ -75,9 +75,9 @@ init :: proc(loc := #caller_location) -> (t: Tracker) {
 	t.allocator = mem.tracking_allocator(t.data)
 	dir, _ := os.split_path(loc.file_path)
 	if index := strings.last_index(dir, "/"); index >= 0 && index + 1 < len(dir) {
-		t.init_loc = dir[index+1:]
+		t.root_folder = dir[index+1:]
 	} else if index := strings.last_index(dir, "\\"); index >= 0 && index + 1 < len(dir) {
-		t.init_loc = dir[index+1:]
+		t.root_folder = dir[index+1:]
 	}
 	return
 }
@@ -90,9 +90,9 @@ init_global :: proc(loc := #caller_location) -> (Tracker) {
 	global.allocator = mem.tracking_allocator(global.data)
 	dir, _ := os.split_path(loc.file_path)
 	if index := strings.last_index(dir, "/"); index >= 0 && index + 1 < len(dir) {
-		global.init_loc = dir[index+1:]
+		global.root_folder = dir[index+1:]
 	} else if index := strings.last_index(dir, "\\"); index >= 0 && index + 1 < len(dir) {
-		global.init_loc = dir[index+1:]
+		global.root_folder = dir[index+1:]
 	}
 	return global
 }
@@ -113,10 +113,10 @@ print_and_destroy :: proc(t: ^Tracker) {
 
 //	Trim long paths to something more readable if possible without allocating any dynamic memory
 @(private)
-trim_path :: proc(file_path: string, init_loc: string) -> (path: string) {
+trim_path :: proc(file_path: string, root_folder: string) -> (path: string) {
 	if index := strings.last_index(file_path, ODIN_BUILD_PROJECT_NAME); index >= 0 {
 		path = file_path[index:]
-	} else if index := strings.last_index(file_path, init_loc); index >= 0 {
+	} else if index := strings.last_index(file_path, root_folder); root_folder != "" && index >= 0 {
 		path = file_path[index:]
 	} else if strings.contains(file_path, ODIN_ROOT) {
 		path = file_path[len(ODIN_ROOT):]
@@ -208,7 +208,7 @@ print :: proc(t: Tracker) {
 		for _, entry in t.data.allocation_map {
 			loc    := entry.location
 			label  := afmt.tprintf(" %d", entry.size)
-			field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path, t.init_loc), loc.line, loc.column)
+			field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path, t.root_folder), loc.line, loc.column)
 			record  = record == record_even ? record_odd : record_even
 			length := len(field) + len(loc.procedure) + 1
 			if length < 256 && length > 64 { record[1].width = u8(length) }
@@ -227,7 +227,7 @@ print :: proc(t: Tracker) {
 			for entry in t.data.bad_free_array {
 				loc    := entry.location
 				label  := afmt.tprintf(" %p", entry.memory)
-				field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path, t.init_loc), loc.line, loc.column)
+				field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path, t.root_folder), loc.line, loc.column)
 				record  = record == record_even ? record_odd : record_even
 				length := len(field) + len(loc.procedure) + 1
 				if length < 256 && length > 64 { record[1].width = u8(length) }
