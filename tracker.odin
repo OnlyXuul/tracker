@@ -2,6 +2,8 @@ package tracker
 
 import "core:mem"
 import "core:os"
+import "core:bufio"
+import "core:bytes"
 import "base:runtime"
 import "core:strings"
 
@@ -87,7 +89,7 @@ init_global :: proc(loc := #caller_location) -> (Tracker) {
 //	Destroy and free tracker
 destroy :: proc(t: ^Tracker) {
 	mem.tracking_allocator_destroy(t.data)
-	//restore context.allocator so we can free allocated pointer
+	// Restore context.allocator so we can free allocated pointer
 	context.allocator = runtime.default_allocator()
 	free(t.data)
 }
@@ -98,22 +100,58 @@ print_and_destroy :: proc(t: ^Tracker) {
 	destroy(t)
 }
 
+//	Get package name from file path
+@(private)
+get_package_name :: proc(path: string) -> (pkg: string, ok: bool) {
+	file, os_error := os.open(path, {.Read})
+	if os_error != nil { return "", false }
+	defer os.close(file)
+
+	r: bufio.Reader
+	buf: [1024]byte
+	
+	bufio.reader_init_with_buf(&r, os.to_stream(file), buf[:])
+	defer bufio.reader_destroy(&r)
+
+	for {
+		line, read_err := bufio.reader_read_bytes(&r, '\n', context.temp_allocator)
+		if read_err != nil { return "", false }
+		strings.contains(string(line), "package") or_continue
+		line = bytes.trim_right(line, {';', '\n', '\r'})
+		idx := bytes.last_index_any(line, {' ', '\t'})
+		(idx > 0 && idx + 1 < len(line)) or_break
+		return string(line[idx+1:]), true
+	}
+
+	return "", false
+}
+
 //	Trim long paths to something more readable if possible
 @(private)
 trim_path :: proc(p: string) -> (path: string) {
-	//Odin's tracking allocator uses #caller_location which has / seperator for all paths regardless of os
+	// Odin's tracking allocator uses #caller_location which has / seperator for all paths regardless of os
 	project := "/" + ODIN_BUILD_PROJECT_NAME + "/"
 	odin    := ODIN_ROOT
 	odin     = strings.ends_with(odin, os.Path_Separator_String) ? os.base(odin[:len(odin)-1]) : os.base(odin)
 	odin     = strings.join({"/", odin, "/"}, "", context.temp_allocator)
 
-	afmt.println("-f[#lime]", p)
+	// These will trim most of the time - least rare
 	if idx := strings.index(p, project); idx > 0 && idx + len(project) < len(p) {
 		return p[idx + len(project):]
-	} else if idx := strings.index(p, odin); idx > 0 && idx + len(odin) < len(p) {
+	}
+	if idx := strings.index(p, odin); idx > 0 && idx + len(odin) < len(p) {
 		return p[idx + len(odin):]
 	}
 
+	// Attempt to trim path using package name in file - medium rare
+	if pkg, ok := get_package_name(p); ok {
+		pkg = strings.join({"/", pkg, "/"}, "", context.temp_allocator)
+		if idx := strings.index(p, pkg); idx > 0 && idx + 1 < len(p) {
+			return p[idx + 1:]
+		}
+	}
+
+	// Not trimmed - most rare
 	return p
 }
 
