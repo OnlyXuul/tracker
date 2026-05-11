@@ -12,17 +12,30 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
 ## Steps
 1. Using the terminal, navigate to odin/shared folder and clone with
    ```bash
+   # Option 1 - put tracker and afmt in default shared collection folder inside Odin root folder
    cd $(odin root)shared
+   
+   # Option 2 - put tracker and afmt folders in project source root folder
+   cd <project source root folder>
    git clone https://github.com/OnlyXuul/tracker.git
    git clone https://github.com/OnlyXuul/afmt.git
    ```
-2. Add to your project<br>
+2. Update files
    ```odin
+   // Option 1 - tracker and afmt are in default shared collection folder inside Odin root folder
+   // Add to your project
    import "shared:tracker"
+
+   // Option 2 - tracker and afmt folders are in project source root folder
+   // In your project add
+   import "tracker"
+   //In tracker/tracker.odin change afmt import to
+   import "../afmt"
    ```
 3. Copy into your project:<br>
    ```odin
-   // Non-Global Tracker - Most used - Benefits from main() as the originating scope for everything else after
+   // Option 1 - Most used
+   // Non-Global - Benefits from main() as the originating scope for everything else after
    // Copy-Paste this to top of main in your project
 	when ODIN_DEBUG {
 		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
@@ -31,9 +44,8 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
 		defer tracker.print_and_destroy(&t)
    }
 
-   // or ...
-
-   // Global Tracker - 3 parts - Useful when procedures do not originate from the same scope (i.e. no main procedure)
+   // Option 2 - Useful when procedures do not originate from the same scope (i.e. no main procedure)
+   // Global Tracker - 3 parts
    // Part 1 - Copy-Paste this to beginning of init() procedure like in wasm
    when ODIN_DEBUG {
 		//tracker.NOPANIC = true // uncomment or override with: -define:nopanic=true
