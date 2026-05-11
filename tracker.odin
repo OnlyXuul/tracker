@@ -126,7 +126,7 @@ get_package_name :: proc(path: string) -> (pkg: string, ok: bool) {
 	return "", false
 }
 
-//	Trim long paths to something more readable if possible
+//	Trim long paths to something more readable if possible - also prevents truncation in the tabled ouput
 @(private)
 trim_path :: proc(p: string) -> (path: string) {
 	// Odin's tracking allocator uses #caller_location which has / seperator for all paths regardless of os
