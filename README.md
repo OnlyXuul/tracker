@@ -17,6 +17,8 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
    
    # Option 2 - put tracker and afmt folders in project source root folder
    cd <project source root folder>
+
+   # Then clone both packages
    git clone https://github.com/OnlyXuul/tracker.git
    git clone https://github.com/OnlyXuul/afmt.git
    ```
