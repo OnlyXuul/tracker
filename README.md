@@ -78,7 +78,8 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
    ```
 ## Run example.odin
    ```bash
-   cd $(odin root)shared/tracker/example
+   cd <tracker folder>
+   cd example
    odin run . -debug -define:nopanic=true
    ```
 ## Example Output
