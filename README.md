@@ -29,9 +29,9 @@ Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.ginger
    import "shared:tracker"
 
    // Option 2 - tracker and afmt folders are in project source root folder
-   // In your project add
+   // Add to your project
    import "tracker"
-   //In tracker/tracker.odin change afmt import to
+   // Change afmt import in tracker/tracker.odin
    import "../afmt"
    ```
 3. Copy into your project:<br>
