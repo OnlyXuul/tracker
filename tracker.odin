@@ -104,15 +104,17 @@ trim_path :: proc(p: string) -> (path: string) {
 	//Odin's tracking allocator uses #caller_location which has / seperator for all paths regardless of os
 	project := "/" + ODIN_BUILD_PROJECT_NAME + "/"
 	odin    := ODIN_ROOT
-	odin     = strings.join({"/", os.base(odin[:len(odin)-1]), "/"}, "", context.temp_allocator)
+	odin     = strings.ends_with(odin, os.Path_Separator_String) ? os.base(odin[:len(odin)-1]) : os.base(odin)
+	odin     = strings.join({"/", odin, "/"}, "", context.temp_allocator)
 
-	if idx := strings.index(p, project); idx > 0 {
+	afmt.println("-f[#lime]", p)
+	if idx := strings.index(p, project); idx > 0 && idx + len(project) < len(p) {
 		return p[idx + len(project):]
-	} else if idx := strings.index(p, odin); idx > 0 {
+	} else if idx := strings.index(p, odin); idx > 0 && idx + len(odin) < len(p) {
 		return p[idx + len(odin):]
 	}
 
-	return path
+	return p
 }
 
 //	Convert size values to human-readable units
