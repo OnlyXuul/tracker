@@ -5,6 +5,8 @@ Full credit to Odin (gingerbill) and Karl Zylinski for the original version of t
 
 **This package depends on [afmt](https://github.com/OnlyXuul/afmt) package.**<br>
 
+**Requires Odin version 2026-03 or later. See [moving-towards-a-new-core-os](https://odin-lang.org/news/moving-towards-a-new-core-os/)**<br>
+
 Check out [Ginger Bill’s Memory Allocation Strategy series](https://www.gingerbill.org/series/memory-allocation-strategies/) for tips on memory management.
 
 ## Steps
