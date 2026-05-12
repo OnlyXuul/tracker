@@ -1,9 +1,6 @@
 package tracker
 
 import "core:mem"
-import "core:os"
-import "core:bufio"
-import "core:bytes"
 import "base:runtime"
 import "core:strings"
 
@@ -99,7 +96,7 @@ print_and_destroy :: proc(t: ^Tracker) {
 	print(t^)
 	destroy(t)
 }
-
+/*
 //	Get package name from file path
 @(private)
 get_package_name :: proc(path: string) -> (pkg: string, ok: bool) {
@@ -125,14 +122,27 @@ get_package_name :: proc(path: string) -> (pkg: string, ok: bool) {
 
 	return "", false
 }
+*/
+
+@(private)
+odin_base :: proc() -> string {
+	odin_root := ODIN_ROOT
+	slash: string
+	if strings.ends_with(odin_root, "/") || strings.ends_with(odin_root, "\\") {
+		odin_root = odin_root[:len(odin_root)-1]
+	}
+	if idx := strings.last_index_any(odin_root, "/\\"); idx > 0 && idx + 1 < len(odin_root) {
+		return odin_root[idx+1:]
+	}
+	return "."
+}
 
 //	Trim long paths to something more readable if possible - also prevents truncation in the tabled ouput
 @(private)
 trim_path :: proc(p: string) -> (path: string) {
 	// Odin's tracking allocator uses #caller_location which has / seperator for all paths regardless of os
 	project := "/" + ODIN_BUILD_PROJECT_NAME + "/"
-	odin    := ODIN_ROOT
-	odin     = strings.ends_with(odin, os.Path_Separator_String) ? os.base(odin[:len(odin)-1]) : os.base(odin)
+	odin    := odin_base()
 	odin     = strings.join({"/", odin, "/"}, "", context.temp_allocator)
 
 	// These will trim most of the time - least rare
@@ -144,13 +154,14 @@ trim_path :: proc(p: string) -> (path: string) {
 	}
 
 	// Attempt to trim path using package name in file - medium rare
+	/*
 	if pkg, ok := get_package_name(p); ok {
 		pkg = strings.join({"/", pkg, "/"}, "", context.temp_allocator)
 		if idx := strings.index(p, pkg); idx > 0 && idx + 1 < len(p) {
 			return p[idx + 1:]
 		}
 	}
-
+	*/
 	// Not trimmed - most rare
 	return p
 }
