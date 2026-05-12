@@ -127,7 +127,6 @@ get_package_name :: proc(path: string) -> (pkg: string, ok: bool) {
 @(private)
 odin_base :: proc() -> string {
 	odin_root := ODIN_ROOT
-	slash: string
 	if strings.ends_with(odin_root, "/") || strings.ends_with(odin_root, "\\") {
 		odin_root = odin_root[:len(odin_root)-1]
 	}
