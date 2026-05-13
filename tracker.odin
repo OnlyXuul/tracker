@@ -56,6 +56,7 @@ NOANSI := #config(noansi, false)
 Tracker :: struct {
 	data:      ^mem.Tracking_Allocator,
 	allocator: mem.Allocator,
+	init_loc:  string,
 }
 
 //	Useful if wishing to use tracker independent of main, like with wasm programs
@@ -71,6 +72,7 @@ init :: proc(loc := #caller_location) -> (t: Tracker) {
 	mem.tracking_allocator_init(t.data, context.allocator)
 	t.data.bad_free_callback = NOPANIC ? no_panic_allocator : panic_allocator
 	t.allocator = mem.tracking_allocator(t.data)
+	t.init_loc = loc.file_path
 	return
 }
 
@@ -80,6 +82,7 @@ init_global :: proc(loc := #caller_location) -> (Tracker) {
 	mem.tracking_allocator_init(global.data, context.allocator)
 	global.data.bad_free_callback = NOPANIC ? no_panic_allocator : panic_allocator
 	global.allocator = mem.tracking_allocator(global.data)
+	global.init_loc = loc.file_path
 	return global
 }
 
@@ -96,73 +99,56 @@ print_and_destroy :: proc(t: ^Tracker) {
 	print(t^)
 	destroy(t)
 }
-/*
-//	Get package name from file path
-@(private)
-get_package_name :: proc(path: string) -> (pkg: string, ok: bool) {
-	file, os_error := os.open(path, {.Read})
-	if os_error != nil { return "", false }
-	defer os.close(file)
-
-	r: bufio.Reader
-	buf: [1024]byte
-	
-	bufio.reader_init_with_buf(&r, os.to_stream(file), buf[:])
-	defer bufio.reader_destroy(&r)
-
-	for {
-		line, read_err := bufio.reader_read_bytes(&r, '\n', context.temp_allocator)
-		if read_err != nil { return "", false }
-		strings.contains(string(line), "package") or_continue
-		line = bytes.trim_right(line, {';', '\n', '\r'})
-		idx := bytes.last_index_any(line, {' ', '\t'})
-		(idx > 0 && idx + 1 < len(line)) or_break
-		return string(line[idx+1:]), true
-	}
-
-	return "", false
-}
-*/
 
 @(private)
-odin_base :: proc() -> string {
-	odin_root := ODIN_ROOT
-	if strings.ends_with(odin_root, "/") || strings.ends_with(odin_root, "\\") {
-		odin_root = odin_root[:len(odin_root)-1]
+parent_dir :: proc(path: string) -> string {
+	p := path
+	if strings.ends_with(p, "/") || strings.ends_with(p, "\\") && len(p) > 1 {
+		p = p[:len(p)-1]
+	} else if idx := strings.last_index_any(p, "/\\"); idx > 0 && strings.contains(p[idx:], ".") {
+		p = p[:idx]
 	}
-	if idx := strings.last_index_any(odin_root, "/\\"); idx > 0 && idx + 1 < len(odin_root) {
-		return odin_root[idx+1:]
+	if idx := strings.last_index_any(p, "/\\"); idx > 0 && idx + 1 < len(p) {
+		return p[idx+1:]
 	}
 	return "."
 }
 
-//	Trim long paths to something more readable if possible - also prevents truncation in the tabled ouput
 @(private)
-trim_path :: proc(p: string) -> (path: string) {
-	// Odin's tracking allocator uses #caller_location which has / seperator for all paths regardless of os
-	project := "/" + ODIN_BUILD_PROJECT_NAME + "/"
-	odin    := odin_base()
-	odin     = strings.join({"/", odin, "/"}, "", context.temp_allocator)
-
-	// These will trim most of the time - least rare
-	if idx := strings.index(p, project); idx > 0 && idx + len(project) < len(p) {
-		return p[idx + len(project):]
-	}
-	if idx := strings.index(p, odin); idx > 0 && idx + len(odin) < len(p) {
-		return p[idx + len(odin):]
-	}
-
-	// Attempt to trim path using package name in file - medium rare
-	/*
-	if pkg, ok := get_package_name(p); ok {
-		pkg = strings.join({"/", pkg, "/"}, "", context.temp_allocator)
-		if idx := strings.index(p, pkg); idx > 0 && idx + 1 < len(p) {
-			return p[idx + 1:]
+has_upper :: proc(s: string) -> bool {
+	for i in 0..<len(s) {
+		if s[i] >= 'A' && s[i] <= 'Z' {
+			return true
 		}
 	}
-	*/
-	// Not trimmed - most rare
-	return p
+	return false
+}
+
+//	Trim long paths to something more readable if possible - also prevents truncation in the tabled ouput
+@(private)
+trim_path :: proc(path, init_loc: string) -> string {
+	// Odin's tracking allocator uses #caller_location which has / seperator for all paths regardless of os
+	list := []string {
+		"/" + ODIN_BUILD_PROJECT_NAME + "/",
+		strings.join({"/", parent_dir(init_loc), "/"}, "", context.temp_allocator),
+		strings.join({"/", parent_dir(ODIN_ROOT), "/"}, "", context.temp_allocator),
+		"/shared/",
+		"/source/",
+		"/src/",
+		"/code/",
+		"/project/",
+	}
+
+	p := has_upper(path) ? strings.to_lower(path, context.temp_allocator) : path
+	for i in 0..<len(list) {
+		item := has_upper(list[i]) ? strings.to_lower(list[i], context.temp_allocator) : list[i]
+		strings.contains(p, item) or_continue
+		if idx := strings.index(p, item); idx > 0 && idx + len(item) < len(path) {
+			return path[idx + len(item):]
+		}
+	}
+
+	return path
 }
 
 //	Convert size values to human-readable units
@@ -247,7 +233,7 @@ print :: proc(t: Tracker) {
 		for _, entry in t.data.allocation_map {
 			loc    := entry.location
 			label  := afmt.tprintf(" %d", entry.size)
-			field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path), loc.line, loc.column)
+			field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path, t.init_loc), loc.line, loc.column)
 			record  = record == record_even ? record_odd : record_even
 			length := len(field) + len(loc.procedure) + 1
 			if length < 256 && length > 64 { record[1].width = u8(length) }
@@ -266,7 +252,7 @@ print :: proc(t: Tracker) {
 			for entry in t.data.bad_free_array {
 				loc    := entry.location
 				label  := afmt.tprintf(" %p", entry.memory)
-				field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path), loc.line, loc.column)
+				field  := afmt.tprintf(" %s:%i:%i", trim_path(loc.file_path, t.init_loc), loc.line, loc.column)
 				record  = record == record_even ? record_odd : record_even
 				length := len(field) + len(loc.procedure) + 1
 				if length < 256 && length > 64 { record[1].width = u8(length) }
